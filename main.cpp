@@ -2,8 +2,7 @@
 
 int main()
 {
-    PrettyTree<int> tree = {1, 4, 2, 11, 45, 12, 47};
-    tree.remove(1);
+    ConsoleTree<int> tree = {788, 7, 17, 88, 77, 777};
     std::cout << tree;
     return 0;
 }
