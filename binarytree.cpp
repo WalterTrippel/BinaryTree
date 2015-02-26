@@ -76,8 +76,8 @@ VoidTree::Implementation::TreeNode::~TreeNode()
 
 void VoidTree::Implementation::TreeNode::push(const void * data, int size)
 {
-    unsigned char * c_data = (unsigned char *)data;
-    unsigned char * curr_c_data = (unsigned char *)this->tData;
+    unsigned long * c_data = (unsigned long *)data;
+    unsigned long * curr_c_data = (unsigned long *)this->tData;
     if(*c_data < *curr_c_data)
     {
         if(left == nullptr)

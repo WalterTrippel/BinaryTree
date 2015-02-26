@@ -2,6 +2,7 @@
 #define BINARYTREE_H
 
 #include <iostream>
+#include "basetree.h"
 #include <exception>
 #include <stack>
 #include <vector>
@@ -142,7 +143,7 @@ bool BinaryTree<Data>::isEmpty() const
 }
 
 template<typename Data>
-void BinaryTree<Data>::getElements(std::vector<void *>&array, int &size)
+void BinaryTree<Data>::getElements(std::vector<void *> &array, int &size)
 {
     pimpl->getElements(array, size, sizeof(Data));
 }
