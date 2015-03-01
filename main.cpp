@@ -1,9 +1,16 @@
-#include "prettytree.h"
+#include "binarytree.h"
 
 int main()
 {
-    PrettyTree<int> tree = {8, 7, 17, 88, 77, 777777777};
-    std::cout << tree;
+    IterableTree<int> tree = {10, 12, 11, 122, 8, 7, 9};
+
+    tree.remove(122, sizeof(int));
+
+    for(IterableTree<int>::Iterator it = tree.begin(); it != tree.end(); ++it)
+    {
+        std::cout << *it << " ";
+    }
+
     return 0;
 }
 

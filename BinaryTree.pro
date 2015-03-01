@@ -5,15 +5,12 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += main.cpp \
-    binarytree.cpp \
-    basetree.cpp
+    binarytree.cpp
 
 include(deployment.pri)
 qtcAddDeployment()
 
 HEADERS += \
-    binarytree.h \
-    consoletree.h \
-    prettytree.h \
-    basetree.h
+    basetree.h \
+    binarytree.h
 

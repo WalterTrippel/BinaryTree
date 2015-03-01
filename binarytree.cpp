@@ -12,20 +12,17 @@ public:
     Implementation & operator = (const Implementation & other);
     Implementation & operator = (Implementation && other);
 
-    void clear();
-    void push(const void * data, int size);
-    void remove(void * data);
     bool isEmpty() const;
+    void clear();
 
     struct TreeNode
     {
+        enum Branching {origin, leftBranch, rightBranch} branching;
         TreeNode() = default;
-        TreeNode(const void * data, int size);
+        TreeNode(const void *& data, int size, TreeNode * parent, Branching branching);
         ~TreeNode();
 
-        void push(const void * data, int size);
-        TreeNode * left;
-        TreeNode * right;
+        TreeNode * left, * right, * parent;
         void * tData;
         int tSize;
     } * root;
@@ -33,19 +30,39 @@ public:
     void clear(TreeNode *& root);
     void copy(TreeNode *& copiedNode, TreeNode * otherNode);
     void swap(TreeNode *& rvalue, TreeNode * lvalue);
+
     void inorder(TreeNode * node, TreeNode * rightMost, std::ostream & out);
     TreeNode * rightMost(TreeNode * node) const;
     TreeNode * leftMost(TreeNode * node) const;
     void delLeftmost(TreeNode* n, TreeNode* parent);
     TreeNode * findMin(TreeNode * node) const;
-    void getElements(std::vector<void *>& array, int &size, int data_size) const;
+
+    /** Iterator compability */
+    void *& astericsImpl(void *pointer) const;
+    void nextImpl(void *& pointer) const;
+    void previousImpl(void *& pointer) const;
+    void *beginImpl() const;
+    void findImpl(const void *&value, void *&pointer) const;
+    void push(const void *&value, int size, void *&pointer);
+    void remove(void *&pointer);
+
+    void removeLeaf(TreeNode *& node);
+    void removeChain(TreeNode *& node);
+    void removeFork(TreeNode *& node);
+
 };
 
 
 /**
  * TreeNode implementation
 */
-VoidTree::Implementation::TreeNode::TreeNode(const void * data, int size):left(nullptr), right(nullptr), tData(nullptr), tSize(size)
+VoidTree::Implementation::TreeNode::TreeNode(const void *& data, int size,
+                                             TreeNode * parent, Branching branching):branching(branching),
+                                                                                     left(nullptr),
+                                                                                     right(nullptr),
+                                                                                     parent(nullptr),
+                                                                                     tData(nullptr),
+                                                                                     tSize(size)
 {
     if(data && size)
     {
@@ -70,35 +87,7 @@ VoidTree::Implementation::TreeNode::~TreeNode()
         tData = nullptr;
         left = nullptr;
         right = nullptr;
-
-    }
-}
-
-void VoidTree::Implementation::TreeNode::push(const void * data, int size)
-{
-    unsigned long * c_data = (unsigned long *)data;
-    unsigned long * curr_c_data = (unsigned long *)this->tData;
-    if(*c_data < *curr_c_data)
-    {
-        if(left == nullptr)
-        {
-            left = new TreeNode(data, size);
-        }
-        else
-        {
-            left->push(data, size);
-        }
-    }
-    else if(*c_data >= *curr_c_data)
-    {
-        if(right == nullptr)
-        {
-            right = new TreeNode(data, size);
-        }
-        else
-        {
-            right->push(data, size);
-        }
+        parent = nullptr;
     }
 }
 
@@ -122,7 +111,8 @@ VoidTree::Implementation::Implementation(std::vector<const void *> list, int siz
 {
     for(std::vector<const void *>::iterator i = list.begin(); i != list.end(); ++i)
     {
-        push(*i, size);
+        void * pointer = nullptr;
+        push(*i, size, pointer);
     }
 }
 
@@ -160,14 +150,9 @@ void VoidTree::Implementation::swap(TreeNode *&rvalue, TreeNode *lvalue)
     }
 }
 
-void VoidTree::Implementation::clear()
-{
-    clear(root);
-}
-
 void VoidTree::Implementation::clear(TreeNode *&root)
 {
-    if(root != nullptr)
+    if(root)
     {
         clear(root->left);
         clear(root->right);
@@ -184,7 +169,7 @@ void VoidTree::Implementation::copy(TreeNode *&copiedNode, TreeNode *otherNode)
     }
     else
     {
-        copiedNode = new TreeNode(otherNode->tData, otherNode->tSize);
+        copiedNode = new TreeNode((const void *&)otherNode->tData, otherNode->tSize, otherNode->parent, otherNode->branching);
         copy(copiedNode->left, otherNode->left);
         copy(copiedNode->right, otherNode->right);
     }
@@ -237,112 +222,9 @@ VoidTree::Implementation::TreeNode * VoidTree::Implementation::findMin(TreeNode 
     return findMin(node->left);
 }
 
-void VoidTree::Implementation::push(const void * data, int size)
-{
-    if(root == nullptr)
-    {
-        root = new TreeNode(data, size);
-    }
-    else
-    {
-        root->push(data, size);
-    }
-}
-
 bool VoidTree::Implementation::isEmpty() const
 {
     return root == nullptr;
-}
-
-void VoidTree::Implementation::inorder(TreeNode *node, TreeNode *rightMost, std::ostream &out)
-{
-    if(node == nullptr)
-    {
-        return;
-    }
-    else if(node->left)
-    {
-        inorder(node->left, rightMost, out);
-    }
-    unsigned char * c_data = (unsigned char *)node->tData;
-    out << *c_data;
-    if(node != rightMost)
-    {
-        out << ", ";
-    }
-    if(node->right)
-    {
-        inorder(node->right, rightMost, out);
-    }
-}
-
-void VoidTree::Implementation::getElements(std::vector<void *>&array, int &size, int data_size) const
-{
-    size = 0;
-    array.clear();
-    Implementation::TreeNode * node = root;
-    std::stack< Implementation::TreeNode*> stack;
-    do
-    {
-        while(node != nullptr)
-        {
-            ++size;
-            stack.push(node);
-            node = node->left;
-        }
-        do
-        {
-            Implementation::TreeNode * top = stack.top();
-            stack.pop();
-            if(top != nullptr && top->right != nullptr)
-            {
-                stack.push(node);
-                node = top->right;
-                break;
-            }
-        }
-        while(!stack.empty());
-    }
-    while(!stack.empty());
-
-
-    node = root;
-    int index = 0;
-    for(int i = 0; i < size; ++i)
-    {
-        void * current = (void *)(new unsigned char[data_size]);
-        array.push_back(current);
-    }
-
-    do
-    {
-        while(node != nullptr)
-        {
-            stack.push(node);
-            node = node->left;
-        }
-        do
-        {
-            Implementation::TreeNode * top = stack.top();
-            stack.pop();
-            if(top != nullptr)
-            {
-                for(int j = 0; j < data_size; ++j)
-                {
-                    *((unsigned char *) array.at(index) + j) = *((unsigned char *) top->tData + j);
-                }
-                ++index;
-            }
-            if(top != nullptr && top->right != nullptr)
-            {
-                stack.push(node);
-                node = top->right;
-                break;
-            }
-        }
-        while(!stack.empty());
-    }
-    while(!stack.empty());
 }
 
 /**
@@ -350,152 +232,276 @@ void VoidTree::Implementation::getElements(std::vector<void *>&array, int &size,
  * BinaryTree itself implementation
 */
 
-void VoidTree::Implementation::remove(void *data)
+void *& VoidTree::Implementation::astericsImpl(void *pointer) const
 {
-    TreeNode *temp = root, *parent = root;
-    unsigned char * key = (unsigned char *) data;
-    unsigned char * local_data = (unsigned char *)temp->tData;
-    if(isEmpty())
+    if(pointer)
+    {
+        return ((TreeNode *) pointer)->tData;
+    }
+    else
     {
         throw BSTException();
     }
-    else
+}
+
+void VoidTree::Implementation::nextImpl(void *&pointer) const
+{
+    TreeNode * current = (TreeNode *)pointer;
+    if(current)
     {
-        while(temp)
+        if(current->right)
         {
-            local_data = (unsigned char *)temp->tData;
-            if(*local_data == *key)
+            current = current->right;
+            while(current->left)
             {
-                break;
+                current = current->left;
             }
-            else
-            {
-                parent = temp;
-                temp = *key > *local_data ? temp->right : temp->left;
-            }
-        }
-    }
-    if(temp == nullptr)
-    {
-        return;
-    }
-    else if(temp == root)
-    {
-        if(temp->right == nullptr && temp->left == nullptr)
-        {
-            root = nullptr;
-        }
-        else if(temp->left == nullptr)
-        {
-            root = temp->right;
-        }
-        else if(temp->right == nullptr)
-        {
-            root = temp->left;
         }
         else
         {
-            TreeNode *current_temp;
-            current_temp = temp->right;
-            while(current_temp->left != nullptr)
+            while(current->parent && current->branching == TreeNode::rightBranch)
             {
-                temp = current_temp;
-                current_temp = current_temp->left;
+                current = current->parent;
             }
-            if(current_temp != temp->right)
+
+            if(!current->parent)
             {
-                temp->left = current_temp->right;
-                current_temp->right = root->right;
+                current = nullptr;
             }
-            current_temp->left = root->left;
-            root = current_temp;
+            else
+            {
+                current = current->parent;
+            }
+        }
+        pointer = (void *)current;
+    }
+}
+
+void VoidTree::Implementation::previousImpl(void *&pointer) const
+{
+    TreeNode * current = (TreeNode *)pointer;
+
+    if(current)
+    {
+        if(current->left)
+        {
+            current = current->left;
+
+            while(current->right)
+            {
+                current = current->right;
+            }
+            pointer = (void *)current;
+        }
+        else
+        {
+            while(current->parent && current->branching == TreeNode::leftBranch)
+            {
+                current = current->parent;
+            }
+            if(current->parent)
+            {
+                pointer = (void *)current->parent;
+            }
+            else
+            {
+                assert(nullptr);
+            }
         }
     }
     else
     {
-        if(temp->right == nullptr && temp->left == nullptr){
-            if(parent->right == temp)
-            {
-                parent->right = nullptr;
-            }
-            else
-            {
-                parent->left = nullptr;
-            }
-        }
-        else if(temp->left == nullptr){
-            if(parent->right == temp)
-            {
-                parent->right = temp->right;
-            }
-            else
-            {
-                parent->left = temp->right;
-            }
-        }
-        else if(temp->right == nullptr)
+        current = root;
+
+        if(current)
         {
-            if(parent->right == temp)
+            while(current->right)
             {
-                parent->right = temp->left;
-            }
-            else
-            {
-                parent->left = temp->left;
+                current = current->right;
             }
         }
-        else if (temp->left != nullptr && temp->right != nullptr)
+        pointer = (void *)pointer;
+    }
+}
+
+void *VoidTree::Implementation::beginImpl() const
+{
+    TreeNode * current = root;
+    if(current)
+    {
+        while(current->left)
         {
-            TreeNode *curr_right = temp->right;
-            if(curr_right->left == nullptr && curr_right->right == nullptr)
+            current = current->left;
+        }
+    }
+    return (void *)current;
+}
+
+void VoidTree::Implementation::findImpl(const void *&value, void *&pointer) const
+{
+    TreeNode * current = root;
+    unsigned char * data = (unsigned char *) value;
+    unsigned char * current_data = (unsigned char *) current->tData;
+    while(current && *data != *current_data)
+    {
+        current = *data < *current_data ? current->left : current->right;
+        if(current)
+            current_data = (unsigned char *) current->tData;
+    }
+    pointer = (void *)current;
+}
+
+void VoidTree::Implementation::push(const void *& data, int size, void *& pointer)
+{
+    TreeNode * parent = nullptr;
+    TreeNode * current = root;
+    TreeNode::Branching branching = TreeNode::origin;
+
+    while(current)
+    {
+        parent = current;
+
+        unsigned char * c_data = (unsigned char *)data;
+        unsigned char * curr_c_data = (unsigned char *)current->tData;
+        if(*c_data < *curr_c_data)
+        {
+            branching = TreeNode::leftBranch;
+            current = current->left;
+        }
+        else
+        {
+            branching = TreeNode::rightBranch;
+            current = current->right;
+        }
+    }
+
+    current = new TreeNode(data, size, parent, branching);
+    if(parent)
+    {
+        (branching == TreeNode::leftBranch ? parent->left : parent->right) = current;
+        current->parent = parent;
+    }
+    else
+    {
+        root = current;
+    }
+    pointer = (void *)current;
+}
+
+void VoidTree::Implementation::remove(void *&pointer)
+{
+    if(pointer)
+    {
+        TreeNode * current = (TreeNode *)pointer;
+        if(current->left && current->right)
+        {
+            removeFork(current);
+        }
+        else
+        {
+            nextImpl(pointer);
+            bool rootRemoving = (root == current);
+            removeChain(current);
+
+            if(rootRemoving)
             {
-                temp->tData = nullptr;
-                temp->tData = (void *)(new unsigned char[temp->tSize]);
-                for(int i = 0; i < temp->tSize; ++i)
-                {
-                    *((unsigned char *)temp->tData + i) = *((unsigned char *)curr_right->tData + i);
-                }
-                delete curr_right;
-                temp->right = nullptr;
-            }
-            else
-            {
-                if((temp->right)->left != nullptr)
-                {
-                    TreeNode* lcurr;
-                    TreeNode* lcurr_parent;
-                    lcurr_parent = temp->right;
-                    lcurr = (temp->right)->left;
-                    while(lcurr->left != nullptr)
-                    {
-                        lcurr_parent = lcurr;
-                        lcurr = lcurr->left;
-                    }
-                    temp->tData = nullptr;
-                    temp->tData = (void *)(new unsigned char[temp->tSize]);
-                    for(int i = 0; i < temp->tSize; ++i)
-                    {
-                        *((unsigned char *)temp->tData + i) = *((unsigned char *)lcurr->tData + i);
-                    }
-                    delete lcurr;
-                    lcurr_parent->left = nullptr;
-                }
-                else
-                {
-                    TreeNode *tmp = temp->right;
-                    temp->tData = nullptr;
-                    temp->tData = (void *)(new unsigned char[temp->tSize]);
-                    for(int i = 0; i < temp->tSize; ++i)
-                    {
-                        *((unsigned char *)temp->tData + i) = *((unsigned char *)tmp->tData + i);
-                    }
-                    temp->right = tmp->right;
-                    delete tmp;
-                }
+                root = current;
             }
         }
     }
 }
+
+void VoidTree::Implementation::removeLeaf(TreeNode *&node)
+{
+    assert(node);
+    assert(!node->left && !node->right);
+
+    if(node->branching == TreeNode::leftBranch)
+    {
+        node->parent->left = nullptr;
+    }
+    else if(node->branching == TreeNode::rightBranch)
+    {
+        node->parent->right = nullptr;
+    }
+
+    delete node;
+    node = nullptr;
+    assert(!node);
+}
+
+void VoidTree::Implementation::removeChain(TreeNode *&node)
+{
+    assert(node);
+    assert(!node->left || !node->right);
+
+    if(!node->left && !node->right)
+    {
+        removeLeaf(node);
+    }
+    else
+    {
+        assert((!node->left && node->right) || (node->left && !node->right));
+        TreeNode *& child = node->left ? node->left : node->right;
+        TreeNode *& parent = node->parent;
+        child->branching = node->branching;
+        child->parent = parent;
+        if(parent)
+        {
+            if(node->branching == TreeNode::leftBranch)
+            {
+                parent->left = child;
+            }
+            else if(node->branching == TreeNode::rightBranch)
+            {
+                parent->right = child;
+            }
+            else
+            {
+                assert(nullptr);
+            }
+        }
+
+        assert(child->parent == parent && (parent->left == child || parent->right == child));
+        assert((child->branching == TreeNode::leftBranch && parent->left == child) || (child->branching == TreeNode::rightBranch && parent->right == child));
+        delete node;
+        node = nullptr;
+        assert(!node);
+        node = child;
+    }
+}
+
+void VoidTree::Implementation::removeFork(TreeNode *&node)
+{
+    assert(node);
+    assert(node->left && node->right);
+
+    TreeNode * replacement = node;
+    replacement = replacement->right;
+    while(replacement->left)
+    {
+        replacement = replacement->left;
+    }
+    node->tData = nullptr;
+    node->tData = (void *)(new unsigned char[node->tSize]);
+    for(int i = 0; i < node->tSize; ++i)
+    {
+        *((unsigned char *)node->tData + i) = *((unsigned char *)replacement->tData + i);
+    }
+    removeChain(replacement);
+}
+
+void VoidTree::Implementation::clear()
+{
+    clear(root);
+}
+
+
+/** VoidTree implementation */
+/*VoidTree::VoidTree(std::vector<const void *> list, int size):pimpl(nullptr)
+{
+    pimpl = new Implementation(list, size);
+}*/
 
 VoidTree::VoidTree():pimpl(nullptr)
 {
@@ -507,7 +513,7 @@ VoidTree::VoidTree(const VoidTree &other):pimpl(other.pimpl)
     pimpl = new Implementation(*other.pimpl);
 }
 
-VoidTree::VoidTree(std::vector<const void *> list, int size):pimpl(nullptr)
+VoidTree::VoidTree(std::vector<const void *> list, int size)
 {
     pimpl = new Implementation(list, size);
 }
@@ -544,22 +550,42 @@ void VoidTree::clear()
     pimpl->clear();
 }
 
-void VoidTree::push(const void *data, int size)
+void *& VoidTree::astericsImpl(void *pointer) const
 {
-    pimpl->push(data, size);
+    pimpl->astericsImpl(pointer);
 }
 
-void VoidTree::remove(void *data)
+void VoidTree::nextImpl(void *&pointer) const
 {
-    pimpl->remove(data);
+    pimpl->nextImpl(pointer);
+}
+
+void VoidTree::previousImpl(void *&pointer) const
+{
+    pimpl->previousImpl(pointer);
+}
+
+void * VoidTree::beginImpl() const
+{
+    return pimpl->beginImpl();
+}
+
+void VoidTree::findImpl(const void *&value, void *&pointer) const
+{
+    pimpl->findImpl(value, pointer);
+}
+
+void VoidTree::pushImpl(const void *&value, int size, void *&pointer)
+{
+    pimpl->push(value, size, pointer);
+}
+
+void VoidTree::popImpl(void *&pointer)
+{
+    pimpl->remove(pointer);
 }
 
 bool VoidTree::isEmpty() const
 {
     return pimpl->isEmpty();
-}
-
-void VoidTree::getElements(std::vector<void *>&array, int &size, int data_size)
-{
-    pimpl->getElements(array, size, data_size);
 }
