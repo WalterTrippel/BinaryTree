@@ -340,6 +340,10 @@ void *VoidTree::Implementation::beginImpl() const
 void VoidTree::Implementation::findImpl(const void *&value, void *&pointer) const
 {
     TreeNode * current = root;
+    if(!current)
+    {
+        throw BSTException();
+    }
     unsigned char * data = (unsigned char *) value;
     unsigned char * current_data = (unsigned char *) current->tData;
     while(current && *data != *current_data)

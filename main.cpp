@@ -2,11 +2,12 @@
 
 int main()
 {
-    IterableTree<int> tree = {10, 12, 11, 122, 8, 7, 9};
+    BinaryTree<int> tree = {10, 12, 11, 122, 8, 7, 999};
+    //tree.clear();
 
-    tree.remove(122, sizeof(int));
+    tree.remove(5);
 
-    for(IterableTree<int>::Iterator it = tree.begin(); it != tree.end(); ++it)
+    for(BinaryTree<int>::Iterator it = tree.begin(); it != tree.end(); ++it)
     {
         std::cout << *it << " ";
     }

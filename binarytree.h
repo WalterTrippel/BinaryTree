@@ -21,15 +21,17 @@ public:
     typedef TreeIterator<Data> Iterator;
     BinaryTree();
     BinaryTree(const BinaryTree & other);
+    BinaryTree(std::initializer_list<Data> list);
     BinaryTree(BinaryTree && other);
     ~BinaryTree();
 
     BinaryTree & operator = (const BinaryTree & other);
     BinaryTree & operator = (BinaryTree && other);
 
-    void push(Data data);
-    void remove(Data data);
+    void push(const Data &data);
+    void remove(const Data &data);
     void clear();
+    bool isEmpty() const;
     Iterator begin() const;
     Iterator end() const;
 
@@ -54,6 +56,7 @@ public:
     IterableTree & operator = (IterableTree && other);
 
     bool isEmpty() const;
+    void clear();
 
 private:
     Data & astericsImpl(void *pointer) const;
@@ -63,7 +66,6 @@ private:
     void findImpl(const Data& value, void *& pointer) const;
     void pushImpl(const Data& value, void *& pointer);
     void popImpl(void *& pointer);
-    void clear();
     VoidTree * pimpl;
 };
 
@@ -93,6 +95,92 @@ private:
     class Implementation;
     Implementation * pimpl;
 };
+
+/** BinaryTree implementation */
+template<typename Data>
+BinaryTree<Data>::BinaryTree():pimpl(nullptr)
+{
+    pimpl = new IterableTree<Data>;
+}
+
+template<typename Data>
+BinaryTree<Data>::BinaryTree(const BinaryTree &other):pimpl(other.pimpl)
+{
+    pimpl = new IterableTree<Data>(*other.pimpl);
+}
+
+template<typename Data>
+BinaryTree<Data>::BinaryTree(std::initializer_list<Data> list):pimpl(nullptr)
+{
+    pimpl = new IterableTree<Data>(list);
+}
+
+template<typename Data>
+BinaryTree<Data>::BinaryTree(BinaryTree &&other):pimpl(other.pimpl)
+{
+    std::swap(pimpl, other.pimpl);
+}
+
+template<typename Data>
+BinaryTree<Data>::~BinaryTree()
+{
+    pimpl->clear();
+    delete pimpl;
+    pimpl = nullptr;
+}
+
+template<typename Data>
+BinaryTree<Data> & BinaryTree<Data>::operator =(const BinaryTree & other)
+{
+    if(this != &other)
+    {
+        *this = *other.pimpl;
+    }
+    return *this;
+}
+
+template<typename Data>
+BinaryTree<Data> & BinaryTree<Data>::operator =(BinaryTree && other)
+{
+    std::swap(pimpl, other.pimpl);
+    return *this;
+}
+
+template<typename Data>
+void BinaryTree<Data>::push(const Data &data)
+{
+    pimpl->push(data, sizeof(Data));
+}
+
+template<typename Data>
+void BinaryTree<Data>::remove(const Data &data)
+{
+    pimpl->remove(data, sizeof(Data));
+}
+
+template<typename Data>
+void BinaryTree<Data>::clear()
+{
+    pimpl->clear();
+}
+
+template<typename Data>
+bool BinaryTree<Data>::isEmpty() const
+{
+    return pimpl->isEmpty();
+}
+
+template<typename Data>
+TreeIterator<Data> BinaryTree<Data>::begin() const
+{
+    return pimpl->begin();
+}
+
+template<typename Data>
+TreeIterator<Data> BinaryTree<Data>::end() const
+{
+    return pimpl->end();
+}
 
 /** IterableTree pimpl implementation */
 template<typename Data>
